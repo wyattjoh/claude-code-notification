@@ -239,7 +239,7 @@ describe("main", () => {
     // Verify the command uses custom sound
     assertEquals(
       commandArgs[1],
-      `display notification "Custom sound notification" with title "Test Title" sound name "Submarine"`
+      `display notification "Custom sound notification" with title "Test Title" sound name "Submarine"`,
     );
 
     // Restore original objects
@@ -294,7 +294,7 @@ describe("main", () => {
     // Verify the command uses default Glass sound
     assertEquals(
       commandArgs[1],
-      `display notification "Default sound notification" with title "Test Title" sound name "Glass"`
+      `display notification "Default sound notification" with title "Test Title" sound name "Glass"`,
     );
 
     // Restore original objects

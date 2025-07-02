@@ -60,7 +60,8 @@ The hook receives JSON input via stdin with:
 
 - `--sound <name>`: Specify the system sound to play (default: "Glass")
   - Available sounds can be found in `/System/Library/Sounds/`
-  - Common sounds: Glass, Submarine, Frog, Purr, Basso, Blow, Bottle, Funk, Hero, Morse, Ping, Pop, Sosumi, Tink
+  - Common sounds: Glass, Submarine, Frog, Purr, Basso, Blow, Bottle, Funk,
+    Hero, Morse, Ping, Pop, Sosumi, Tink
 
 ## Development Commands
 

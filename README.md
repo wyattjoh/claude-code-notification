@@ -1,6 +1,7 @@
 # Claude Code Notifier
 
-A macOS desktop notification hook for Claude Code that displays native notifications when certain events occur during Claude Code sessions.
+A macOS desktop notification hook for Claude Code that displays native
+notifications when certain events occur during Claude Code sessions.
 
 ## Features
 
@@ -61,7 +62,9 @@ Specify a custom system sound with the `--sound` parameter:
 }
 ```
 
-Available system sounds can be found in `/System/Library/Sounds/`. Common options include:
+Available system sounds can be found in `/System/Library/Sounds/`. Common
+options include:
+
 - Glass (default)
 - Submarine
 - Frog
@@ -105,6 +108,7 @@ echo '{"session_id":"test","transcript_path":"/tmp/test.md","message":"Test mess
 ## How It Works
 
 The notifier:
+
 1. Receives JSON input via stdin from Claude Code
 2. Parses the notification data (title, message, session info)
 3. Uses macOS `osascript` to display a native notification

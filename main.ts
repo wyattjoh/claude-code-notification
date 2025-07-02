@@ -54,7 +54,7 @@ if (import.meta.main) {
   // Parse command line arguments
   let sound = "Glass";
   const args = Deno.args;
-  
+
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--sound" && i + 1 < args.length) {
       sound = args[i + 1];
