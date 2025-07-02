@@ -23,7 +23,7 @@ jobs:
       - name: Format check
         run: deno fmt --check
       - name: Type check
-        run: deno check mod.ts
+        run: deno check
       - name: Test
         run: deno test
         env:
