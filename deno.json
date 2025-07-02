@@ -2,6 +2,7 @@
   "name": "@wyattjoh/claude-code-notification",
   "version": "0.1.0",
   "exports": "./main.ts",
+  "license": "MIT",
   "tasks": {
     "dev": "deno run --watch main.ts",
     "test": "deno test",
