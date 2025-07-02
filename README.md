@@ -23,8 +23,8 @@ deno run --allow-run jsr:@wyattjoh/claude-code-notification
 Clone this repository and run directly:
 
 ```bash
-git clone https://github.com/wyattjoh/claude-notifier.git
-cd claude-notifier
+git clone https://github.com/wyattjoh/claude-code-notifier.git
+cd claude-code-notifier
 deno run --allow-run main.ts
 ```
 
@@ -38,12 +38,15 @@ Configure this tool as a hook in your Claude Code settings:
     "Notification": [
       {
         "type": "command",
-        "command": "deno run --allow-run jsr:@wyattjoh/claude-code-notification"
+        "command": "/opt/homebrew/bin/deno run --allow-run jsr:@wyattjoh/claude-code-notification"
       }
     ]
   }
 }
 ```
+
+> Note: You'll need to specify the absolute path to your locally installed Deno
+> binary. Replace `/opt/homebrew/bin/deno` with the result of `which deno`.
 
 ### Custom Sound
 
@@ -55,12 +58,15 @@ Specify a custom system sound with the `--sound` parameter:
     "Notification": [
       {
         "type": "command",
-        "command": "deno run --allow-run jsr:@wyattjoh/claude-code-notification --sound Submarine"
+        "command": "/opt/homebrew/bin/deno run --allow-run jsr:@wyattjoh/claude-code-notification --sound Submarine"
       }
     ]
   }
 }
 ```
+
+> Note: You'll need to specify the absolute path to your locally installed Deno
+> binary. Replace `/opt/homebrew/bin/deno` with the result of `which deno`.
 
 Available system sounds can be found in `/System/Library/Sounds/`. Common
 options include:
