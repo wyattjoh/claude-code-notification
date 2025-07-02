@@ -1,0 +1,22 @@
+name: PullRequestCheck
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        deno-version: [v2.x]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Deno ${{ matrix.deno-version }}
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: ${{ matrix.deno-version }}
+      - name: Lint
+        run: deno lint
+      - name: Format check
+        run: deno fmt --check
+      - name: Type check
+        run: deno check mod.ts
+      - name: Test
+        run: deno test
