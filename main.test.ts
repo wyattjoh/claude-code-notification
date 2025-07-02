@@ -110,7 +110,7 @@ describe("main", () => {
     // Verify the command handles special characters
     assertEquals(
       commandArgs[1],
-      `display notification "Message with "quotes" and special chars" with title "Title with "quotes"" sound name "Glass"`,
+      `display notification "Message with \\"quotes\\" and special chars" with title "Title with \\"quotes\\"" sound name "Glass"`,
     );
 
     // Restore original objects

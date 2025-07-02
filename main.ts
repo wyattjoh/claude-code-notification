@@ -13,10 +13,11 @@ type NotificationInput = {
    * The message of the notification.
    */
   message: string;
+
   /**
    * The title of the notification.
    */
-  title: string;
+  title?: string;
 };
 
 /**
@@ -41,7 +42,15 @@ export async function main(
   const command = new Deno.Command("osascript", {
     args: [
       "-e",
-      `display notification "${input.message}" with title "${input.title}" sound name "${sound}"`,
+      `display notification ${
+        JSON.stringify(
+          input.message,
+        )
+      } with title ${
+        JSON.stringify(
+          input.title ?? "Claude Code",
+        )
+      } sound name ${JSON.stringify(sound)}`,
     ],
   });
 
