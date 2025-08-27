@@ -46,11 +46,11 @@ deno run --allow-run main.ts
 2. Allow MacOS to show osascript notifications
     <details>
     <summary>Run script editor and display a simple notification</summary>
-    ![script-editor](./img/script-editor.png)
+    <img src="./img/script-editor.png" alt="Generate a test notification from the script editor" />
     </details>
     <details>
     <summary>Enable notifications in System Preferences</summary>
-    ![allow-notifications](./img/allow-notifications.png)
+    <img src="./img/allow-notifications.png" alt="Allow notifications from script editor" />
     </details>
 
 > Note: You'll need to specify the absolute path to your locally installed Deno
