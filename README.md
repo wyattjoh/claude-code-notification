@@ -30,20 +30,28 @@ deno run --allow-run main.ts
 
 ## Usage
 
-Configure this tool as a hook in your Claude Code settings:
-
-```json
-{
-  "hooks": {
-    "Notification": [
-      {
-        "type": "command",
-        "command": "/opt/homebrew/bin/deno run --allow-run jsr:@wyattjoh/claude-code-notification"
-      }
-    ]
-  }
-}
-```
+1. Configure this tool as a hook in your Claude Code settings:
+   ```json
+   {
+     "hooks": {
+       "Notification": [
+         {
+           "type": "command",
+           "command": "/opt/homebrew/bin/deno run --allow-run jsr:@wyattjoh/claude-code-notification"
+         }
+       ]
+     }
+   }
+   ```
+2. Allow MacOS to show osascript notifications
+   <details>
+    <summary>Run script editor and display a simple notification</summary>
+    <img src="./img/script-editor.png" alt="Generate a test notification from the script editor" />
+    </details>
+    <details>
+    <summary>Enable notifications in System Preferences</summary>
+    <img src="./img/allow-notifications.png" alt="Allow notifications from script editor" />
+    </details>
 
 > Note: You'll need to specify the absolute path to your locally installed Deno
 > binary. Replace `/opt/homebrew/bin/deno` with the result of `which deno`.
