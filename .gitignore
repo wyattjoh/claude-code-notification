@@ -1,0 +1,21 @@
+# Rust build artifacts
+/target
+
+# Backup files
+*.bak
+*.swp
+*.tmp
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# macOS
+.DS_Store
+
+# Test artifacts
+test-output/
+
+# Binary artifact (if built locally)
+claude-code-notification

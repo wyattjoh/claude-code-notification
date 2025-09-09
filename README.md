@@ -1,64 +1,35 @@
 # Claude Code Notifier
 
-A macOS desktop notification hook for Claude Code that displays native
-notifications when certain events occur during Claude Code sessions.
-
-## Features
-
-- Native macOS desktop notifications using `osascript`
-- Customizable system sounds
-- Simple JSON-based interface for Claude Code hooks
-- Lightweight Deno-based implementation
+A high-performance Rust CLI tool for displaying cross-platform desktop notifications as a Claude Code hook, with advanced sound support and parallel execution.
 
 ## Installation
 
-### Using JSR (Recommended)
-
-```bash
-deno run --allow-run jsr:@wyattjoh/claude-code-notification
+```shell
+cargo install --git https://github.com/wyattjoh/claude-code-notifier
 ```
 
-### From Source
+## Features
 
-Clone this repository and run directly:
+- **Cross-Platform Notifications** - Native desktop notifications on Windows, macOS, and Linux
+- **Advanced Sound Support** - System sounds and custom audio files with intelligent path resolution
+- **Parallel Execution** - Notification display and sound playback execute simultaneously
+- **Claude Code Integration** - Seamless hook integration with JSON-based interface
+- **Error Resilience** - Graceful handling of sound failures without blocking notifications
+- **High Performance** - Compiled Rust binary with optimized release builds
 
-```bash
-git clone https://github.com/wyattjoh/claude-code-notifier.git
-cd claude-code-notifier
-deno run --allow-run main.ts
-```
+## Requirements
+
+- [Rust](https://rustup.rs/) (for building from source)
+- macOS with `afplay` (for sound support)
+- Claude Code (for hook integration)
 
 ## Usage
 
-1. Configure this tool as a hook in your Claude Code settings:
-   ```json
-   {
-     "hooks": {
-       "Notification": [
-         {
-           "type": "command",
-           "command": "/opt/homebrew/bin/deno run --allow-run jsr:@wyattjoh/claude-code-notification"
-         }
-       ]
-     }
-   }
-   ```
-2. Allow MacOS to show osascript notifications
-   <details>
-    <summary>Run script editor and display a simple notification</summary>
-    <img src="./img/script-editor.png" alt="Generate a test notification from the script editor" />
-    </details>
-    <details>
-    <summary>Enable notifications in System Preferences</summary>
-    <img src="./img/allow-notifications.png" alt="Allow notifications from script editor" />
-    </details>
+The tool integrates with Claude Code as a notification hook, receiving JSON input via stdin and displaying native notifications with optional sound playback.
 
-> Note: You'll need to specify the absolute path to your locally installed Deno
-> binary. Replace `/opt/homebrew/bin/deno` with the result of `which deno`.
+**Basic Integration:**
 
-### Custom Sound
-
-Specify a custom system sound with the `--sound` parameter:
+Configure in your Claude Code settings:
 
 ```json
 {
@@ -66,64 +37,120 @@ Specify a custom system sound with the `--sound` parameter:
     "Notification": [
       {
         "type": "command",
-        "command": "/opt/homebrew/bin/deno run --allow-run jsr:@wyattjoh/claude-code-notification --sound Submarine"
+        "command": "claude-code-notification"
       }
     ]
   }
 }
 ```
 
-> Note: You'll need to specify the absolute path to your locally installed Deno
-> binary. Replace `/opt/homebrew/bin/deno` with the result of `which deno`.
+**With Custom Sound:**
 
-Available system sounds can be found in `/System/Library/Sounds/`. Common
-options include:
-
-- Glass (default)
-- Submarine
-- Frog
-- Purr
-- Basso
-- Blow
-- Bottle
-- Funk
-- Hero
-- Morse
-- Ping
-- Pop
-- Sosumi
-- Tink
-
-## Development
-
-### Prerequisites
-
-- [Deno](https://deno.land/) runtime
-- macOS (for notification support)
-
-### Running Tests
-
-```bash
-deno test
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "type": "command",
+        "command": "claude-code-notification --sound Submarine"
+      }
+    ]
+  }
+}
 ```
 
-### Manual Testing
+## Configuration
+
+### Sound Options
+
+The `--sound` parameter supports two modes:
+
+**System Sounds** (no `/` in name):
+- Resolves to `/System/Library/Sounds/{name}.aiff`
+- Available: Glass (default), Submarine, Frog, Purr, Basso, Blow, Bottle, Funk, Hero, Morse, Ping, Pop, Sosumi, Tink
+
+**Custom Paths** (contains `/`):
+- Used directly as file path to `afplay`
+- Supports: `.wav`, `.aiff`, `.mp3`, `.m4a`, and other formats supported by `afplay`
+- Examples:
+  - `--sound /path/to/custom/sound.wav`
+  - `--sound ./sounds/notification.mp3`
+  - `--sound ~/Music/alert.m4a`
+
+### JSON Input Schema
+
+The tool expects JSON input via stdin with the following structure:
+
+```json
+{
+  "session_id": "string",
+  "transcript_path": "string", 
+  "message": "string",
+  "title": "string (optional)"
+}
+```
+
+**Fields:**
+- `session_id` - Claude session identifier
+- `transcript_path` - Path to session transcript file
+- `message` - Notification body text
+- `title` - Notification title (defaults to "Claude Code")
+
+## Manual Testing
 
 Test the notifier with sample JSON input:
 
 ```bash
-# Default sound
-echo '{"session_id":"test","transcript_path":"/tmp/test.md","message":"Test message","title":"Test"}' | deno run --allow-run main.ts
+# Default Glass sound
+echo '{"session_id":"test","transcript_path":"/tmp/test.md","message":"Test message","title":"Test"}' | claude-code-notification
 
-# Custom sound
-echo '{"session_id":"test","transcript_path":"/tmp/test.md","message":"Test message","title":"Test"}' | deno run --allow-run main.ts --sound Submarine
+# System sound
+echo '{"session_id":"test","transcript_path":"/tmp/test.md","message":"Test message","title":"Test"}' | claude-code-notification --sound Submarine
+
+# Custom sound file
+echo '{"session_id":"test","transcript_path":"/tmp/test.md","message":"Test message","title":"Test"}' | claude-code-notification --sound ./custom-sound.wav
 ```
 
-## How It Works
+## Development
 
-The notifier:
+To contribute or modify the CLI:
 
-1. Receives JSON input via stdin from Claude Code
-2. Parses the notification data (title, message, session info)
-3. Uses macOS `osascript` to display a native notification
-4. Plays the specified system sound
+```bash
+# Clone the repository
+git clone https://github.com/wyattjoh/claude-code-notifier.git
+cd claude-code-notifier
+
+# Run in development
+cargo run
+
+# Build release binary
+make build-release
+
+# Run tests
+make test
+
+# Format code
+make fmt
+
+# Lint code  
+make clippy
+
+# Install globally
+make install
+```
+
+The CLI uses `notify-rust` for cross-platform notifications and `afplay` for macOS sound playback, with comprehensive error handling and parallel execution for optimal user experience.
+
+## Architecture
+
+The notification system consists of:
+
+- **CLI Entry Point** (`src/main.rs`) - Argument parsing with `clap`
+- **Core Library** (`src/lib.rs`) - Notification logic and sound playback
+- **Error Handling** (`src/error.rs`) - Structured error types with `thiserror`
+- **Cross-Platform Support** - `notify-rust` for notifications, `afplay` for sounds
+- **Parallel Execution** - Threading for simultaneous notification display and sound playback
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.

@@ -1,0 +1,43 @@
+name: Publish to Homebrew
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Format check
+        run: make fmt
+        continue-on-error: true
+
+      - name: Lint code
+        run: make clippy
+
+      - name: Run tests
+        run: make test
+
+      - name: Build release
+        run: make build-release
+
+      - name: Update Homebrew formula
+        uses: wyattjoh/homebrew-bump-revision@v1
+        with:
+          tap: wyattjoh/homebrew-stable
+          formula: claude-code-notification
+          github-token: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+          git-user-name: Wyatt Johnson
+          git-user-email: me@wyattjoh.ca
