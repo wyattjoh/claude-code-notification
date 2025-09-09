@@ -5,7 +5,7 @@ A high-performance Rust CLI tool for displaying cross-platform desktop notificat
 ## Installation
 
 ```shell
-cargo install --git https://github.com/wyattjoh/claude-code-notifier
+brew install wyattjoh/stable/claude-code-notification
 ```
 
 ## Features
