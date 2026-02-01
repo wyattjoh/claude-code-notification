@@ -11,10 +11,26 @@ pub use error::{NotificationError, NotificationResult};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NotificationInput {
+    #[serde(default)]
     pub session_id: String,
+    #[serde(default)]
     pub transcript_path: String,
+    #[serde(default)]
+    pub cwd: String,
+    #[serde(default)]
+    pub permission_mode: String,
+    #[serde(default)]
+    pub hook_event_name: String,
+    #[serde(default)]
     pub message: String,
+    #[serde(default)]
     pub title: Option<String>,
+    #[serde(default)]
+    pub notification_type: Option<String>,
+    #[serde(default)]
+    pub stop_hook_active: Option<bool>,
+    #[serde(default)]
+    pub reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -105,11 +121,70 @@ pub fn main<R: Read>(mut stdin: R, sound: Sound) -> Result<()> {
     Ok(())
 }
 
+/// Generate notification title and body based on hook event type
+fn generate_notification_content(input: &NotificationInput) -> (String, String) {
+    match input.hook_event_name.as_str() {
+        "Stop" => {
+            // Claude Code has finished responding
+            let title = input.title.as_deref()
+                .unwrap_or("Claude Code");
+
+            let body = if input.message.is_empty() {
+                // If no custom message provided, create a more informative one
+                let cwd_display = if !input.cwd.is_empty() {
+                    format!("\n📁 {}", input.cwd)
+                } else {
+                    String::new()
+                };
+                format!("✅ Task completed!{}", cwd_display)
+            } else if let Some(reason) = &input.reason {
+                format!("Claude stopped: {}", reason)
+            } else {
+                input.message.clone()
+            };
+
+            (title.to_string(), body)
+        }
+        "Notification" => {
+            // Regular notification event
+            let title = input.title.as_deref()
+                .unwrap_or("Claude Code");
+
+            let body = if let Some(notification_type) = &input.notification_type {
+                format!("{} - {}", notification_type, input.message)
+            } else {
+                input.message.clone()
+            };
+
+            (title.to_string(), body)
+        }
+        "" | "unknown" => {
+            // Legacy format or unknown event type
+            let title = input.title.as_deref()
+                .unwrap_or("Claude Code");
+            (title.to_string(), input.message.clone())
+        }
+        _ => {
+            // Other event types
+            let title = input.title.as_deref()
+                .unwrap_or("Claude Code");
+            let body = format!("[{}] {}",
+                input.hook_event_name, input.message);
+            (title.to_string(), body)
+        }
+    }
+}
+
 fn send_notification(input: &NotificationInput, sound: &Sound) -> Result<()> {
-    let title = input.title.as_deref().unwrap_or("Claude Code");
+    // Generate notification content based on event type
+    let (title, body) = generate_notification_content(input);
 
     // Clone the sound for the thread
     let sound_clone = sound.clone();
+
+    // Clone data for osascript
+    let title_clone = title.clone();
+    let body_clone = body.clone();
 
     // Spawn a thread to play the sound in parallel
     let sound_handle = thread::spawn(move || {
@@ -118,10 +193,13 @@ fn send_notification(input: &NotificationInput, sound: &Sound) -> Result<()> {
         }
     });
 
-    // Show the notification (this happens in parallel with sound)
-    let notification_result = Notification::new()
-        .summary(title)
-        .body(&input.message)
+    // Send notification using osascript (more reliable on macOS)
+    send_notification_osascript(&title_clone, &body_clone)?;
+
+    // Also try notify-rust for cross-platform compatibility
+    let _ = Notification::new()
+        .summary(&title)
+        .body(&body)
         .show();
 
     // Wait for the sound thread to complete
@@ -129,8 +207,51 @@ fn send_notification(input: &NotificationInput, sound: &Sound) -> Result<()> {
         eprintln!("Warning: Sound thread panicked: {:?}", e);
     }
 
-    // Return the notification result
-    notification_result?;
+    Ok(())
+}
+
+/// Send notification using macOS osascript (more reliable than notify-rust)
+fn send_notification_osascript(title: &str, body: &str) -> Result<()> {
+    // Sanitize the body and title for AppleScript
+    // Replace backslashes and quotes with escaped versions
+    let clean_title = title
+        .replace('\\', "\\\\")
+        .replace('"', r#"\""#);
+
+    let clean_body = body
+        .replace('\\', "\\\\")
+        .replace('"', r#"\"#)
+        .replace('\n', " ");  // Replace newlines with spaces for single-line display
+
+    let script = format!(
+        r#"display notification "{}" with title "{}" sound name "Glass""#,
+        clean_body,
+        clean_title
+    );
+
+    let output = Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .output();
+
+    match output {
+        Ok(result) => {
+            if !result.status.success() {
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                eprintln!(
+                    "Warning: osascript notification failed: {}",
+                    stderr.trim()
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Warning: Failed to execute osascript for notification: {}",
+                e
+            );
+        }
+    }
+
     Ok(())
 }
 
@@ -185,6 +306,92 @@ mod tests {
         assert_eq!(input.session_id, "test-session-123");
         assert_eq!(input.message, "Test notification message");
         assert_eq!(input.title, Some("Test Title".to_string()));
+    }
+
+    #[test]
+    fn test_parse_stop_hook_input() {
+        let input_data = r#"{
+            "session_id": "test-session-456",
+            "transcript_path": "/path/to/transcript.md",
+            "cwd": "/Users/test/project",
+            "permission_mode": "default",
+            "hook_event_name": "Stop",
+            "stop_hook_active": false
+        }"#;
+
+        // Test that we can parse Stop hook input
+        let input: Result<NotificationInput, _> = serde_json::from_str(input_data);
+        assert!(input.is_ok());
+
+        let input = input.unwrap();
+        assert_eq!(input.session_id, "test-session-456");
+        assert_eq!(input.hook_event_name, "Stop");
+        assert_eq!(input.cwd, "/Users/test/project");
+        assert_eq!(input.stop_hook_active, Some(false));
+    }
+
+    #[test]
+    fn test_parse_notification_hook_input() {
+        let input_data = r#"{
+            "session_id": "test-session-789",
+            "transcript_path": "/path/to/transcript.md",
+            "cwd": "/Users/test/project",
+            "permission_mode": "default",
+            "hook_event_name": "Notification",
+            "message": "Permission needed",
+            "title": "Alert",
+            "notification_type": "permission_prompt"
+        }"#;
+
+        // Test that we can parse Notification hook input
+        let input: Result<NotificationInput, _> = serde_json::from_str(input_data);
+        assert!(input.is_ok());
+
+        let input = input.unwrap();
+        assert_eq!(input.hook_event_name, "Notification");
+        assert_eq!(input.message, "Permission needed");
+        assert_eq!(input.notification_type, Some("permission_prompt".to_string()));
+    }
+
+    #[test]
+    fn test_generate_notification_content_stop() {
+        let input = NotificationInput {
+            session_id: "test".to_string(),
+            transcript_path: "/path/to/transcript.md".to_string(),
+            cwd: "/Users/test/project".to_string(),
+            permission_mode: "default".to_string(),
+            hook_event_name: "Stop".to_string(),
+            message: String::new(),
+            title: None,
+            notification_type: None,
+            stop_hook_active: Some(false),
+            reason: None,
+        };
+
+        let (title, body) = generate_notification_content(&input);
+        assert_eq!(title, "Claude Code");
+        assert!(body.contains("✅ Task completed!"));
+        assert!(body.contains("/Users/test/project"));
+    }
+
+    #[test]
+    fn test_generate_notification_content_notification() {
+        let input = NotificationInput {
+            session_id: "test".to_string(),
+            transcript_path: "/path/to/transcript.md".to_string(),
+            cwd: String::new(),
+            permission_mode: "default".to_string(),
+            hook_event_name: "Notification".to_string(),
+            message: "Test message".to_string(),
+            title: Some("Custom Title".to_string()),
+            notification_type: Some("permission_prompt".to_string()),
+            stop_hook_active: None,
+            reason: None,
+        };
+
+        let (title, body) = generate_notification_content(&input);
+        assert_eq!(title, "Custom Title");
+        assert_eq!(body, "permission_prompt - Test message");
     }
 
     #[test]
