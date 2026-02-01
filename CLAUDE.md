@@ -232,6 +232,62 @@ The `--sound` parameter supports intelligent path resolution:
   - `--sound /Users/dev/sounds/alert.m4a`
   - `--sound ~/Music/custom-alert.aiff`
 
+### Terminal Activation Parameter
+
+**NEW:** `--activate-terminal` - Automatically activate the terminal application when notification is displayed
+
+This feature is especially useful when running multiple Claude Code sessions in different terminals. When enabled, the notification will automatically bring the corresponding terminal to the foreground, saving you from manually searching for the correct window.
+
+**How It Works:**
+- The tool automatically detects your terminal application (Terminal.app, iTerm2, Warp, WezTerm, etc.)
+- After displaying the notification, it uses AppleScript to activate the terminal
+- A 300ms delay ensures the notification is visible before switching focus
+- The terminal becomes the frontmost window, ready for your input
+
+**Supported Terminals:**
+- **Terminal.app** (com.apple.Terminal) - Default macOS terminal
+- **iTerm2** (com.googlecode.iTerm2) - Popular enhanced terminal
+- **Warp** (dev.warp.Warp-Stable) - Modern Rust-based terminal
+- **WezTerm** (org.wezfurlong.wezterm) - Cross-platform GPU terminal
+- **VSCode Integrated** (com.microsoft.VSCode) - Visual Studio Code terminal
+- **JetBrains IDE** (com.jetbrains.intellij) - IDE integrated terminals
+
+**Usage Examples:**
+```bash
+# Enable terminal activation
+claude-code-notification --activate-terminal
+
+# Combine with custom sound
+claude-code-notification --sound Submarine --activate-terminal
+```
+
+**Hook Configuration with Terminal Activation:**
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-code-notification --activate-terminal"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Detection Method:**
+The tool detects your terminal by checking the following environment variables:
+- `TERM_PROGRAM` - Set by most macOS terminals (e.g., "iTerm.app", "Apple_Terminal")
+- `TERM` - Contains terminal type (e.g., "wezterm" for WezTerm)
+- `VSCODE_PID` - Indicates VSCode integrated terminal
+- `IDE_PRODUCT`/`JETBRAINS_IDE` - Indicates JetBrains IDE terminal
+
+**Note:** Terminal activation is currently macOS-only and requires AppleScript support. On other platforms, the feature is silently ignored.
+
 ## Development Workflow
 
 ### Local Development

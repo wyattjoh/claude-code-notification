@@ -13,6 +13,7 @@ brew install wyattjoh/stable/claude-code-notification
 - **Cross-Platform Notifications** - Native desktop notifications on Windows, macOS, and Linux
 - **Stop Hook Support** - Get notified when Claude Code finishes a task
 - **Notification Hook Support** - Get notified for permission requests and other events
+- **Terminal Auto-Activation** - Automatically bring the correct terminal to the front (NEW!)
 - **Advanced Sound Support** - System sounds and custom audio files with intelligent path resolution
 - **Parallel Execution** - Notification display and sound playback execute simultaneously
 - **Claude Code Integration** - Seamless hook integration with JSON-based interface
@@ -243,7 +244,29 @@ echo '{"session_id":"test","transcript_path":"/tmp/test.md","cwd":"/Users/test/p
 
 # Test with custom sound file
 echo '{"session_id":"test","transcript_path":"/tmp/test.md","cwd":"/tmp","permission_mode":"default","hook_event_name":"Notification","message":"Test notification"}' | claude-code-notification --sound ./custom-sound.wav
+
+# Test terminal auto-activation (macOS)
+echo '{"session_id":"test","transcript_path":"/tmp/test.md","cwd":"/tmp","permission_mode":"default","hook_event_name":"Notification","message":"Terminal activation test"}' | claude-code-notification --activate-terminal
+
+# Test with both sound and terminal activation
+echo '{"session_id":"test","transcript_path":"/tmp/test.md","cwd":"/tmp","permission_mode":"default","hook_event_name":"Stop","message":""}' | claude-code-notification --sound Submarine --activate-terminal
 ```
+
+**NEW: Terminal Auto-Activation**
+
+The `--activate-terminal` flag automatically brings your terminal to the front when a notification is displayed. This is especially useful when running multiple Claude Code sessions:
+
+```bash
+# Enable terminal activation in hooks
+claude-code-notification --activate-terminal
+```
+
+**How It Works:**
+1. The tool detects your terminal application (Terminal.app, iTerm2, Warp, WezTerm, etc.)
+2. After displaying the notification, it activates the terminal using AppleScript
+3. The terminal becomes the frontmost window, ready for your input
+
+**Supported Terminals:** Terminal.app, iTerm2, Warp, WezTerm, VSCode Integrated, JetBrains IDE terminals
 
 ## Development
 

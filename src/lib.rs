@@ -3,11 +3,77 @@ pub mod error;
 use anyhow::Result;
 use notify_rust::Notification;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::io::Read;
 use std::process::Command;
 use std::thread;
 
 pub use error::{NotificationError, NotificationResult};
+
+/// Terminal application types supported for auto-activation
+#[derive(Debug, Clone, PartialEq)]
+pub enum TerminalApp {
+    Terminal,
+    ITerm,
+    Warp,
+    WezTerm,
+    VSCodeIntegrated,
+    JetBrainsIDE,
+    Unknown(String),
+}
+
+impl TerminalApp {
+    /// Get the bundle identifier for macOS app activation
+    pub fn bundle_id(&self) -> &str {
+        match self {
+            TerminalApp::Terminal => "com.apple.Terminal",
+            TerminalApp::ITerm => "com.googlecode.iTerm2",
+            TerminalApp::Warp => "dev.warp.Warp-Stable",
+            TerminalApp::WezTerm => "org.wezfurlong.wezterm",
+            TerminalApp::VSCodeIntegrated => "com.microsoft.VSCode",
+            TerminalApp::JetBrainsIDE => "com.jetbrains.intellij", // Generic JetBrains
+            TerminalApp::Unknown(_) => "",
+        }
+    }
+
+    /// Detect the terminal application from environment variables
+    pub fn detect() -> Self {
+        // Check TERM_PROGRAM (set by most macOS terminals)
+        if let Ok(term_program) = env::var("TERM_PROGRAM") {
+            return match term_program.as_str() {
+                "Apple_Terminal" => TerminalApp::Terminal,
+                "iTerm.app" => TerminalApp::ITerm,
+                "Warp.app" => TerminalApp::Warp,
+                "vscode" => TerminalApp::VSCodeIntegrated,
+                _ => TerminalApp::Unknown(term_program),
+            };
+        }
+
+        // Check for WezTerm
+        if let Ok(term) = env::var("TERM") {
+            if term.contains("wezterm") {
+                return TerminalApp::WezTerm;
+            }
+        }
+
+        // Check for JetBrains IDE terminal
+        if env::var("IDE_PRODUCT").is_ok() || env::var("JETBRAINS_IDE").is_ok() {
+            return TerminalApp::JetBrainsIDE;
+        }
+
+        // Check VSCode integrated terminal
+        if env::var("VSCODE_PID").is_ok() || env::var("TERM_PROGRAM").is_ok() && env::var("TERM_PROGRAM").unwrap() == "vscode" {
+            return TerminalApp::VSCodeIntegrated;
+        }
+
+        // Default to Terminal.app on macOS
+        #[cfg(target_os = "macos")]
+        return TerminalApp::Terminal;
+
+        #[cfg(not(target_os = "macos"))]
+        return TerminalApp::Unknown("unknown".to_string());
+    }
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NotificationInput {
@@ -107,7 +173,7 @@ impl Sound {
     }
 }
 
-pub fn main<R: Read>(mut stdin: R, sound: Sound) -> Result<()> {
+pub fn main<R: Read>(mut stdin: R, sound: Sound, activate_terminal: bool) -> Result<()> {
     // Read all input from stdin
     let mut buffer = String::new();
     stdin.read_to_string(&mut buffer)?;
@@ -115,8 +181,15 @@ pub fn main<R: Read>(mut stdin: R, sound: Sound) -> Result<()> {
     // Parse the JSON input
     let input: NotificationInput = serde_json::from_str(&buffer)?;
 
+    // Detect the terminal application if activation is requested
+    let terminal = if activate_terminal {
+        Some(TerminalApp::detect())
+    } else {
+        None
+    };
+
     // Create and send the notification
-    send_notification(&input, &sound)?;
+    send_notification(&input, &sound, terminal)?;
 
     Ok(())
 }
@@ -175,7 +248,11 @@ fn generate_notification_content(input: &NotificationInput) -> (String, String) 
     }
 }
 
-fn send_notification(input: &NotificationInput, sound: &Sound) -> Result<()> {
+fn send_notification(
+    input: &NotificationInput,
+    sound: &Sound,
+    terminal: Option<TerminalApp>,
+) -> Result<()> {
     // Generate notification content based on event type
     let (title, body) = generate_notification_content(input);
 
@@ -205,6 +282,13 @@ fn send_notification(input: &NotificationInput, sound: &Sound) -> Result<()> {
     // Wait for the sound thread to complete
     if let Err(e) = sound_handle.join() {
         eprintln!("Warning: Sound thread panicked: {:?}", e);
+    }
+
+    // Activate the terminal application if requested
+    if let Some(term) = terminal {
+        // Add a small delay to ensure notification is visible first
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        activate_terminal(&term)?;
     }
 
     Ok(())
@@ -277,6 +361,52 @@ fn play_sound(sound: &Sound) -> Result<()> {
             eprintln!(
                 "Warning: Failed to execute afplay for sound '{}': {}",
                 sound_path, e
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// Activate the terminal application using AppleScript
+fn activate_terminal(terminal: &TerminalApp) -> Result<()> {
+    let bundle_id = terminal.bundle_id();
+
+    if bundle_id.is_empty() {
+        eprintln!(
+            "Warning: Cannot activate unknown terminal application: {:?}",
+            terminal
+        );
+        return Ok(());
+    }
+
+    let script = format!(
+        r#"tell application "{}" to activate"#,
+        bundle_id
+    );
+
+    let output = Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .output();
+
+    match output {
+        Ok(result) => {
+            if !result.status.success() {
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                eprintln!(
+                    "Warning: Failed to activate terminal '{}': {}",
+                    bundle_id,
+                    stderr.trim()
+                );
+            } else {
+                eprintln!("✅ Activated terminal: {}", bundle_id);
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Warning: Failed to execute osascript to activate terminal: {}",
+                e
             );
         }
     }
@@ -416,7 +546,7 @@ mod tests {
     fn test_parse_invalid_json() {
         let invalid_json = "{ invalid json }";
         let cursor = Cursor::new(invalid_json);
-        let result = main(cursor, Sound::Glass);
+        let result = main(cursor, Sound::Glass, false);
 
         assert!(result.is_err());
     }
@@ -425,7 +555,7 @@ mod tests {
     fn test_empty_input() {
         let empty_input = "";
         let cursor = Cursor::new(empty_input);
-        let result = main(cursor, Sound::Glass);
+        let result = main(cursor, Sound::Glass, false);
 
         assert!(result.is_err());
     }
