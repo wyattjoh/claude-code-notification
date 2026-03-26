@@ -76,23 +76,43 @@ fn validate_sound_path(
 pub fn run_setup() -> Result<()> {
     println!("🔧 Setting up Claude Code notifications\n");
 
+    // Ask which hooks to configure
+    let hook_choices = vec![
+        "Notification only", "Stop only", "Both Notification and Stop"
+    ];
+    let hook_choice = Select::new(
+        "Which hooks do you want to configure?",
+        hook_choices
+    )
+    .with_help_message(
+        "Notification: Shows alerts when Claude sends notifications\nStop: Shows alerts when Claude finishes a task",
+    )
+    .prompt()?;
+
+    let configure_notification = hook_choice == "Notification only" || hook_choice == "Both Notification and Stop";
+    let configure_stop = hook_choice == "Stop only" || hook_choice == "Both Notification and Stop";
+
     let available_sounds = get_available_system_sounds();
     let mut sound_options: Vec<String> = available_sounds;
     sound_options.push("Custom file path...".to_string());
 
-    let sound_choice = Select::new("Select a notification sound:", sound_options)
-        .with_help_message(
-            "Choose a system sound or select 'Custom file path...' to specify your own",
-        )
-        .prompt()?;
+    let selected_sound = if configure_notification || configure_stop {
+        let sound_choice = Select::new("Select a notification sound:", sound_options.clone())
+            .with_help_message(
+                "Choose a system sound or select 'Custom file path...' to specify your own",
+            )
+            .prompt()?;
 
-    let selected_sound = if sound_choice == "Custom file path..." {
-        Text::new("Enter the path to your custom sound file:")
-            .with_help_message("Supported formats: .wav, .aiff, .mp3, .m4a")
-            .with_validator(validate_sound_path)
-            .prompt()?
+        if sound_choice == "Custom file path..." {
+            Text::new("Enter the path to your custom sound file:")
+                .with_help_message("Supported formats: .wav, .aiff, .mp3, .m4a")
+                .with_validator(validate_sound_path)
+                .prompt()?
+        } else {
+            sound_choice
+        }
     } else {
-        sound_choice
+        "Glass".to_string()
     };
 
     let settings_path = get_claude_settings_path()?;
@@ -110,15 +130,25 @@ pub fn run_setup() -> Result<()> {
         json!({})
     };
 
-    // Update the hooks configuration
-    let notification_command = if selected_sound.contains('/') {
-        format!("claude-code-notification --sound \"{}\"", selected_sound)
-    } else {
-        format!("claude-code-notification --sound {}", selected_sound)
+    // Ensure hooks object exists
+    if !settings["hooks"].is_object() {
+        settings["hooks"] = json!({});
+    }
+
+    // Helper function to build command
+    let build_command = |sound: &str| -> String {
+        if sound.contains('/') {
+            format!("claude-code-notification --sound \"{}\"", sound)
+        } else {
+            format!("claude-code-notification --sound {}", sound)
+        }
     };
 
-    settings["hooks"] = json!({
-        "Notification": [
+    // Configure Notification hook
+    if configure_notification {
+        let notification_command = build_command(&selected_sound);
+
+        settings["hooks"]["Notification"] = json!([
             {
                 "hooks": [
                     {
@@ -127,8 +157,26 @@ pub fn run_setup() -> Result<()> {
                     }
                 ]
             }
-        ]
-    });
+        ]);
+    }
+
+    // Configure Stop hook
+    if configure_stop {
+        let stop_command = build_command(&selected_sound);
+
+        let stop_config = json!([
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": stop_command
+                    }
+                ]
+            }
+        ]);
+
+        settings["hooks"]["Stop"] = stop_config;
+    }
 
     // Write updated settings
     let settings_json = serde_json::to_string_pretty(&settings)?;
@@ -137,6 +185,13 @@ pub fn run_setup() -> Result<()> {
     println!("✅ Claude Code settings updated successfully!");
     println!("📁 Settings file: {}", settings_path.display());
     println!("🔊 Selected sound: {}", selected_sound);
+    println!("\nConfigured hooks:");
+    if configure_notification {
+        println!("  • Notification - Shows alerts when Claude sends notifications");
+    }
+    if configure_stop {
+        println!("  • Stop - Shows alerts when Claude finishes a task");
+    }
     println!("\nYour Claude Code notifications are now configured.");
 
     Ok(())

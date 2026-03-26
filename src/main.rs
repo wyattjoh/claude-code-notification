@@ -16,6 +16,12 @@ fn main() -> Result<()> {
                 .help("System sound to play with notification")
                 .default_value("Glass"),
         )
+        .arg(
+            Arg::new("activate-terminal")
+                .long("activate-terminal")
+                .action(clap::ArgAction::SetTrue)
+                .help("Automatically activate the terminal application when notification is displayed"),
+        )
         .subcommand(Command::new("setup").about("Configure Claude Code settings for notifications"))
         .get_matches();
 
@@ -25,8 +31,10 @@ fn main() -> Result<()> {
             let sound_name = matches.get_one::<String>("sound").unwrap();
             let sound = Sound::from_name(sound_name);
 
+            let activate_terminal = matches.get_flag("activate-terminal");
+
             let stdin = io::stdin();
-            notification_main(stdin, sound)
+            notification_main(stdin, sound, activate_terminal)
         }
     }
 }
