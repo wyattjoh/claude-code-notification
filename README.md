@@ -36,8 +36,13 @@ Configure in your Claude Code settings:
   "hooks": {
     "Notification": [
       {
-        "type": "command",
-        "command": "claude-code-notification"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-code-notification"
+          }
+        ]
       }
     ]
   }
@@ -51,13 +56,20 @@ Configure in your Claude Code settings:
   "hooks": {
     "Notification": [
       {
-        "type": "command",
-        "command": "claude-code-notification --sound Submarine"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-code-notification --sound Submarine"
+          }
+        ]
       }
     ]
   }
 }
 ```
+
+The `matcher` field can be left empty to fire on all notification events, or set to a specific event type (e.g. `permission_prompt`, `idle_prompt`, `auth_success`). See the [Claude Code hooks documentation](https://code.claude.com/docs/en/hooks) for the full list of matchers.
 
 ## Configuration
 

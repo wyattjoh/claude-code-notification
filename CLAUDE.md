@@ -44,8 +44,13 @@ This program integrates with Claude Code's notification system through the hooks
   "hooks": {
     "Notification": [
       {
-        "type": "command",
-        "command": "claude-code-notification"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-code-notification"
+          }
+        ]
       }
     ]
   }
@@ -58,8 +63,13 @@ This program integrates with Claude Code's notification system through the hooks
   "hooks": {
     "Notification": [
       {
-        "type": "command", 
-        "command": "claude-code-notification --sound Submarine"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-code-notification --sound Submarine"
+          }
+        ]
       }
     ]
   }
