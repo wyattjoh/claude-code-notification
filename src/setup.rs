@@ -190,8 +190,8 @@ mod tests {
             eprintln!("❌ Schema validation failed:");
             for error in validator.iter_errors(&test_settings) {
                 eprintln!("  - {}", error);
-                eprintln!("    Instance path: {}", error.instance_path);
-                eprintln!("    Schema path: {}", error.schema_path);
+                eprintln!("    Instance path: {}", error.instance_path());
+                eprintln!("    Schema path: {}", error.schema_path());
             }
             panic!("Generated settings JSON does not match Claude Code schema");
         }
